@@ -1,4 +1,5 @@
 import { commuteConfig } from '../config/commute';
+import { fetchCitybusFirstEta } from '../lib/citybus';
 import { formatAccident, formatEta, formatTimeLabel, formatTraffic, formatWeather } from '../lib/format';
 import { defaultScenarioId, mockScenarios } from '../lib/mockData';
 import { normalizeSignals } from '../lib/normalize';
@@ -7,6 +8,7 @@ import { evaluateCommute } from '../lib/verdictRules';
 type PageProps = {
   searchParams?: {
     scenario?: string;
+    source?: string;
   };
 };
 
@@ -19,14 +21,49 @@ function getScenario(selectedScenarioId?: string) {
     }
   }
 
-  return (
-    mockScenarios.find((scenario) => scenario.id === defaultScenarioId) ?? mockScenarios[0]
-  );
+  return mockScenarios.find((scenario) => scenario.id === defaultScenarioId) ?? mockScenarios[0];
 }
 
-export default function HomePage({ searchParams }: PageProps) {
+export default async function HomePage({ searchParams }: PageProps) {
   const scenario = getScenario(searchParams?.scenario);
-  const normalized = normalizeSignals(scenario.signals);
+  const useMockOnly = searchParams?.source === 'mock';
+
+  let preferredEtaMin = scenario.signals.preferredEtaMin;
+  let preferredEtaSource: 'live' | 'mock' = 'mock';
+  let updatedAt = scenario.updatedAt;
+  let dataSourceLabel = `Mock scenario: ${scenario.name}`;
+
+  if (!useMockOnly) {
+    try {
+      const liveEta = await fetchCitybusFirstEta({
+        operator: commuteConfig.preferredBus.operator,
+        stopId: commuteConfig.preferredBus.stopId,
+        route: commuteConfig.preferredBus.route,
+        direction: commuteConfig.preferredBus.direction,
+      });
+
+      if (liveEta.etaMin !== null) {
+        preferredEtaMin = liveEta.etaMin;
+        preferredEtaSource = 'live';
+        dataSourceLabel = 'Live preferred ETA: Citybus';
+      } else {
+        dataSourceLabel = `No live Citybus ETA available right now. Using mock scenario: ${scenario.name}`;
+      }
+
+      if (liveEta.updatedAt) {
+        updatedAt = liveEta.updatedAt;
+      }
+    } catch {
+      dataSourceLabel = `Citybus API unavailable. Using mock scenario: ${scenario.name}`;
+    }
+  }
+
+  const signals = {
+    ...scenario.signals,
+    preferredEtaMin,
+  };
+
+  const normalized = normalizeSignals(signals);
   const outcome = evaluateCommute(normalized);
   const isDev = process.env.NODE_ENV !== 'production';
   const trainRecommended = outcome.action === 'Train fallback recommended';
@@ -36,8 +73,8 @@ export default function HomePage({ searchParams }: PageProps) {
       <div className="container">
         <section className="card header-card">
           <h1>Commute Dashboard HK</h1>
-          <p>Updated: {formatTimeLabel(scenario.updatedAt)}</p>
-          <p className="subtle">Mock scenario: {scenario.name}</p>
+          <p>Updated: {formatTimeLabel(updatedAt)}</p>
+          <p className="subtle">{dataSourceLabel}</p>
         </section>
 
         <section className="card verdict-card">
@@ -50,12 +87,16 @@ export default function HomePage({ searchParams }: PageProps) {
         <section className="card">
           <h3>Bus options</h3>
           <div className="row">
-            <span>Preferred ({commuteConfig.preferredBus.route})</span>
-            <strong>{formatEta(scenario.signals.preferredEtaMin)}</strong>
+            <span>
+              Preferred ({commuteConfig.preferredBus.route}) {commuteConfig.preferredBus.stopLabel}
+            </span>
+            <strong>
+              {formatEta(signals.preferredEtaMin)} · {preferredEtaSource === 'live' ? 'Live' : 'Mock fallback'}
+            </strong>
           </div>
           <div className="row">
             <span>Backup ({commuteConfig.backupBus.route})</span>
-            <strong>{formatEta(scenario.signals.backupEtaMin)}</strong>
+            <strong>{formatEta(signals.backupEtaMin)}</strong>
           </div>
         </section>
 
@@ -63,15 +104,15 @@ export default function HomePage({ searchParams }: PageProps) {
           <h3>Disruption signals</h3>
           <div className="row">
             <span>Traffic</span>
-            <strong>{formatTraffic(scenario.signals.traffic)}</strong>
+            <strong>{formatTraffic(signals.traffic)}</strong>
           </div>
           <div className="row">
             <span>Road accident alert</span>
-            <strong>{formatAccident(scenario.signals.accident)}</strong>
+            <strong>{formatAccident(signals.accident)}</strong>
           </div>
           <div className="row">
             <span>Weather severity</span>
-            <strong>{formatWeather(scenario.signals.weather)}</strong>
+            <strong>{formatWeather(signals.weather)}</strong>
           </div>
         </section>
 
@@ -99,6 +140,9 @@ export default function HomePage({ searchParams }: PageProps) {
                 </li>
               ))}
             </ul>
+            <p>
+              For safe local testing, force mock mode: <a href="/?source=mock">/?source=mock</a>
+            </p>
           </section>
         )}
       </div>
