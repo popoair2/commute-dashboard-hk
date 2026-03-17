@@ -29,6 +29,7 @@ export default function HomePage({ searchParams }: PageProps) {
   const normalized = normalizeSignals(scenario.signals);
   const outcome = evaluateCommute(normalized);
   const isDev = process.env.NODE_ENV !== 'production';
+  const trainRecommended = outcome.action === 'Train fallback recommended';
 
   return (
     <main className="page">
@@ -40,6 +41,7 @@ export default function HomePage({ searchParams }: PageProps) {
         </section>
 
         <section className="card verdict-card">
+          <p className="verdict-label">Current commute verdict</p>
           <h2>{outcome.verdict}</h2>
           <p className="action">{outcome.action}</p>
           <p className="reason">{outcome.reason}</p>
@@ -75,7 +77,15 @@ export default function HomePage({ searchParams }: PageProps) {
 
         <section className="card">
           <h3>Fallback guidance</h3>
-          <p>If needed, switch to: {commuteConfig.trainFallbackLabel}.</p>
+          {trainRecommended ? (
+            <p className="fallback-primary">
+              Recommended now: switch to {commuteConfig.trainFallbackLabel}.
+            </p>
+          ) : (
+            <p>
+              Keep {commuteConfig.trainFallbackLabel} as your backup if bus conditions worsen.
+            </p>
+          )}
           <p className="subtle">Profile: {commuteConfig.profileName}</p>
         </section>
 

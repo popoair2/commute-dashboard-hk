@@ -52,26 +52,40 @@ body {
 
 .verdict-card {
   background: var(--verdict-bg);
+  border-color: #cfe5f7;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  padding: 14px;
+}
+
+.verdict-label {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .verdict-card h2 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
 }
 
 .action {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-weight: 700;
+  font-size: 1.02rem;
 }
 
 .reason {
   margin: 6px 0 0;
   color: var(--muted);
+  font-size: 0.92rem;
 }
 
 h3 {
-  margin: 0 0 10px;
-  font-size: 1rem;
+  margin: 0 0 8px;
+  font-size: 0.98rem;
 }
 
 .row {
@@ -89,7 +103,12 @@ h3 {
 
 .subtle {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.fallback-primary {
+  margin: 0;
+  font-weight: 600;
 }
 
 .dev-card ul {
@@ -99,4 +118,20 @@ h3 {
 
 .dev-card li {
   margin: 4px 0;
+}
+
+.dev-card {
+  background: #f8fafc;
+  border-color: #e5eaf1;
+}
+
+.dev-card h3 {
+  font-size: 0.86rem;
+  color: #64748b;
+}
+
+.dev-card,
+.dev-card a {
+  color: #64748b;
+  font-size: 0.85rem;
 }
