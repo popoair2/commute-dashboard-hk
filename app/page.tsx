@@ -3,6 +3,7 @@ import { fetchCitybusFirstEta } from '../lib/citybus';
 import { formatAccident, formatEta, formatTimeLabel, formatTraffic, formatWeather } from '../lib/format';
 import { defaultScenarioId, mockScenarios } from '../lib/mockData';
 import { normalizeSignals } from '../lib/normalize';
+import { fetchTrafficLevel } from '../lib/traffic';
 import { evaluateCommute } from '../lib/verdictRules';
 
 type PageProps = {
@@ -30,6 +31,8 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   let preferredEtaMin = scenario.signals.preferredEtaMin;
   let preferredEtaSource: 'live' | 'mock' = 'mock';
+  let traffic = scenario.signals.traffic;
+  let trafficSource: 'live' | 'mock' = 'mock';
   let updatedAt = scenario.updatedAt;
   let dataSourceLabel = `Mock scenario: ${scenario.name}`;
 
@@ -56,11 +59,21 @@ export default async function HomePage({ searchParams }: PageProps) {
     } catch {
       dataSourceLabel = `Citybus API unavailable. Using mock scenario: ${scenario.name}`;
     }
+
+    try {
+      const liveTraffic = await fetchTrafficLevel();
+
+      traffic = liveTraffic.traffic;
+      trafficSource = 'live';
+    } catch {
+      trafficSource = 'mock';
+    }
   }
 
   const signals = {
     ...scenario.signals,
     preferredEtaMin,
+    traffic,
   };
 
   const normalized = normalizeSignals(signals);
@@ -104,7 +117,9 @@ export default async function HomePage({ searchParams }: PageProps) {
           <h3>Disruption signals</h3>
           <div className="row">
             <span>Traffic</span>
-            <strong>{formatTraffic(signals.traffic)}</strong>
+            <strong>
+              {formatTraffic(signals.traffic)} · {trafficSource === 'live' ? 'Live' : 'Mock fallback'}
+            </strong>
           </div>
           <div className="row">
             <span>Road accident alert</span>
