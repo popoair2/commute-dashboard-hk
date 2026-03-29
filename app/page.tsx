@@ -29,12 +29,14 @@ export default async function HomePage({ searchParams }: PageProps) {
   const scenario = getScenario(searchParams?.scenario);
   const useMockOnly = searchParams?.source === 'mock';
 
-  let preferredEtaMin = scenario.signals.preferredEtaMin;
-  let preferredEtaSource: 'live' | 'mock' = 'mock';
+  let preferredEtaMin = useMockOnly ? scenario.signals.preferredEtaMin : null;
+  let preferredEtaSource: 'live' | 'mock' | 'none' = useMockOnly ? 'mock' : 'none';
   let traffic = scenario.signals.traffic;
   let trafficSource: 'live' | 'mock' = 'mock';
   let updatedAt = scenario.updatedAt;
-  let dataSourceLabel = `Mock scenario: ${scenario.name}`;
+  let dataSourceLabel = useMockOnly
+    ? `Mock scenario: ${scenario.name}`
+    : 'No live Citybus ETA available right now';
 
   if (!useMockOnly) {
     try {
@@ -50,14 +52,14 @@ export default async function HomePage({ searchParams }: PageProps) {
         preferredEtaSource = 'live';
         dataSourceLabel = 'Live preferred ETA: Citybus';
       } else {
-        dataSourceLabel = `No live Citybus ETA available right now. Using mock scenario: ${scenario.name}`;
+        dataSourceLabel = 'No live Citybus ETA available right now';
       }
 
       if (liveEta.updatedAt) {
         updatedAt = liveEta.updatedAt;
       }
     } catch {
-      dataSourceLabel = `Citybus API unavailable. Using mock scenario: ${scenario.name}`;
+      dataSourceLabel = 'Citybus API unavailable. No live ETA right now';
     }
 
     try {
@@ -104,7 +106,12 @@ export default async function HomePage({ searchParams }: PageProps) {
               Preferred ({commuteConfig.preferredBus.route}) {commuteConfig.preferredBus.stopLabel}
             </span>
             <strong>
-              {formatEta(signals.preferredEtaMin)} · {preferredEtaSource === 'live' ? 'Live' : 'Mock fallback'}
+              {formatEta(signals.preferredEtaMin)} ·{' '}
+              {preferredEtaSource === 'live'
+                ? 'Live'
+                : preferredEtaSource === 'mock'
+                  ? 'Mock fallback'
+                  : 'No live ETA'}
             </strong>
           </div>
           <div className="row">
